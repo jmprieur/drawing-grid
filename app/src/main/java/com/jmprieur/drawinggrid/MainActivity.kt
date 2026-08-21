@@ -37,8 +37,10 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.isSystemInDarkTheme
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
@@ -172,7 +174,7 @@ private fun PhotoArea(uri: String, settings: GridSettings, modifier: Modifier = 
 
 @Composable
 private fun FittedImageWithGrid(image: ImageBitmap, settings: GridSettings, modifier: Modifier) {
-    var containerSize = remember { IntSize.Zero }
+    var containerSize by remember { mutableStateOf(IntSize.Zero) }
     val bounds = GridGeometry.fittedBounds(
         containerSize.width.toFloat(), containerSize.height.toFloat(), image.width.toFloat(), image.height.toFloat(),
     )
@@ -259,7 +261,7 @@ private fun SettingSlider(
 }
 
 @Composable
-private fun DrawingGridTheme(content: @Composable () -> Unit) {
+fun DrawingGridTheme(content: @Composable () -> Unit) {
     val colors = if (isSystemInDarkTheme()) {
         androidx.compose.material3.darkColorScheme()
     } else {

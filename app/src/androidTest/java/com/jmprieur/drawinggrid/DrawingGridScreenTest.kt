@@ -4,6 +4,7 @@ import androidx.activity.ComponentActivity
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -30,6 +31,19 @@ class DrawingGridScreenTest {
         composeRule.setContent {
             DrawingGridTheme {
                 DrawingGridScreen("content://photo", GridSettings(), {}, { saveClicked = true }, {})
+            }
+
+            @Test
+            fun photoStateSwitchesToPerspectiveControls() {
+                composeRule.setContent {
+                    DrawingGridTheme {
+                        DrawingGridScreen("content://photo", GridSettings(), {}, {}, {})
+                    }
+                }
+
+                composeRule.onNodeWithTag("perspective_tab").performClick()
+
+                composeRule.onNodeWithText("Show perspective").assertIsDisplayed()
             }
         }
 

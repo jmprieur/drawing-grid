@@ -26,6 +26,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -56,6 +57,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.clipRect
+import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
@@ -71,6 +73,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.math.roundToInt
+import kotlin.math.hypot
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: android.os.Bundle?) {
@@ -228,7 +231,7 @@ private fun PhotoEditor(
                     detecting = false
                 }
             },
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().heightIn(max = 320.dp),
         )
     }
 }
@@ -428,6 +431,19 @@ private fun ImageWorkspace(
                             center = Offset(marker.x, marker.y),
                             style = androidx.compose.ui.graphics.drawscope.Stroke(2f),
                         )
+                        val distance = hypot(
+                            (point.position.x - 0.5f).toDouble(),
+                            (point.position.y - 0.5f).toDouble(),
+                        ).toFloat()
+                        drawContext.canvas.nativeCanvas.drawText(
+                            "VP${index + 1} · ${"%.1f".format(distance)}×",
+                            marker.x.coerceIn(4f, size.width - 72f),
+                            (marker.y - 18f).coerceIn(16f, size.height - 4f),
+                            android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+                                color = perspective.color.toInt()
+                                textSize = 13.dp.toPx()
+                            },
+                        )
                     }
                 }
                 anchor?.let {
@@ -605,6 +621,16 @@ private fun PerspectiveControls(
         1f..6f,
         steps = 4,
     ) { value -> onPerspectiveChange { it.copy(thickness = value) } }
+    Text("Guide color", fontWeight = FontWeight.Medium)
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        listOf("Yellow" to 0xFFFFD740L, "White" to 0xFFFFFFFFL, "Red" to 0xFFFF5252L).forEach { (name, color) ->
+            FilterChip(
+                selected = perspective.color == color,
+                onClick = { onPerspectiveChange { it.copy(color = color) } },
+                label = { Text(name) },
+            )
+        }
+    }
 }
 
 @Composable

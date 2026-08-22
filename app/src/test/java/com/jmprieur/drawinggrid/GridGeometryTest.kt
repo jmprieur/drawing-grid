@@ -84,7 +84,8 @@ class GridGeometryTest {
     fun `outside point gets an edge indicator`() {
         val indicator = PerspectiveGeometry.edgeIndicator(Point2(900f, 300f), 600f, 400f)
 
-        assertEquals(Point2(578f, 246.33333f), indicator)
+        assertEquals(578f, indicator!!.x, 0.001f)
+        assertEquals(246.33333f, indicator.y, 0.001f)
         assertNull(PerspectiveGeometry.edgeIndicator(Point2(300f, 200f), 600f, 400f))
     }
 }

@@ -58,6 +58,7 @@ object VanishingPointDetector {
                 val x = (l1.c * l2.b - l2.c * l1.b) / determinant
                 val y = (l1.a * l2.c - l2.a * l1.c) / determinant
                 val point = NormalizedPoint(x / width, y / height)
+                // These normalized limits are symmetric around the image center at 0.5.
                 if (point.x in -10f..11f && point.y in -10f..11f) {
                     intersections += point to (l1.votes + l2.votes)
                 }

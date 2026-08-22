@@ -14,9 +14,11 @@ import androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.gestures.detectDragGestures
-import androidx.compose.foundation.gestures.detectTapGestures
-import androidx.compose.foundation.gestures.detectTransformGestures
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.calculateCentroid
+import androidx.compose.foundation.gestures.calculatePan
+import androidx.compose.foundation.gestures.calculateZoom
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -48,6 +50,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.ui.Alignment
@@ -289,7 +292,7 @@ private fun ImageWorkspace(
 ) {
     var containerSize by remember { mutableStateOf(IntSize.Zero) }
     var transform by remember(image) { mutableStateOf(ViewTransform()) }
-    var draggedPoint by remember { mutableIntStateOf(-1) }
+    val currentPerspective by rememberUpdatedState(perspective)
     val imageBounds = GridGeometry.fittedBounds(
         containerSize.width.toFloat(), containerSize.height.toFloat(), image.width.toFloat(), image.height.toFloat(),
     )
@@ -306,69 +309,89 @@ private fun ImageWorkspace(
     }
     val gestureModifier = modifier
         .onSizeChanged { containerSize = it }
-        .pointerInput(image, mode) {
-            detectTransformGestures { centroid, pan, zoom, _ ->
-                val newScale = (transform.scale * zoom).coerceIn(0.18f, 8f)
-                val appliedZoom = newScale / transform.scale
-                transform = ViewTransform(
-                    scale = newScale,
-                    offsetX = centroid.x + (transform.offsetX - centroid.x) * appliedZoom + pan.x,
-                    offsetY = centroid.y + (transform.offsetY - centroid.y) * appliedZoom + pan.y,
-                )
-            }
-        }
-        .pointerInput(imageBounds, transform, mode, perspective.points) {
-            if (mode == EditorMode.PERSPECTIVE && imageBounds != null) {
-                detectTapGestures { tap ->
-                    val points = perspective.points.map {
-                        PerspectiveGeometry.toWorkspace(it.position, imageBounds, transform)
-                    }
-                    val indicatorIndex = points.indexOfFirst { point ->
-                        PerspectiveGeometry.edgeIndicator(point, size.width.toFloat(), size.height.toFloat())
-                            ?.let { PerspectiveGeometry.distance(it, Point2(tap.x, tap.y)) < 32f } == true
-                    }
-                    if (indicatorIndex >= 0) {
-                        val point = points[indicatorIndex]
-                        transform = transform.copy(
-                            offsetX = transform.offsetX + size.width / 2f - point.x,
-                            offsetY = transform.offsetY + size.height / 2f - point.y,
-                        )
-                    } else {
-                        val displayed = PerspectiveGeometry.transformedBounds(imageBounds, transform)
-                        if (tap.x in displayed.left..displayed.right && tap.y in displayed.top..displayed.bottom) {
-                            val anchor = PerspectiveGeometry.toNormalized(Point2(tap.x, tap.y), imageBounds, transform)
-                            onPerspectiveChange { it.copy(anchor = anchor) }
-                        }
-                    }
-                }
-            }
-        }
-        .pointerInput(imageBounds, transform, mode, perspective.points) {
-            if (mode == EditorMode.PERSPECTIVE && imageBounds != null) {
-                detectDragGestures(
-                    onDragStart = { start ->
-                        draggedPoint = perspective.points.indexOfFirst {
+        .pointerInput(imageBounds, mode) {
+            if (imageBounds != null) {
+                awaitEachGesture {
+                    val gesturePerspective = currentPerspective
+                    val down = awaitFirstDown()
+                    val originalTransform = transform
+                    var currentTransform = transform
+                    var moved = false
+                    var totalPan = Offset.Zero
+                    val draggedPoint = if (mode == EditorMode.PERSPECTIVE) {
+                        gesturePerspective.points.indexOfFirst {
                             PerspectiveGeometry.distance(
                                 PerspectiveGeometry.toWorkspace(it.position, imageBounds, transform),
-                                Point2(start.x, start.y),
+                                Point2(down.position.x, down.position.y),
                             ) < 36f
                         }
-                    },
-                    onDragEnd = { draggedPoint = -1 },
-                    onDragCancel = { draggedPoint = -1 },
-                ) { change, _ ->
-                    if (draggedPoint >= 0) {
-                        val normalized = PerspectiveGeometry.toNormalized(
-                            Point2(change.position.x, change.position.y),
-                            imageBounds,
-                            transform,
-                        )
-                        onPerspectiveChange {
-                            it.copy(points = it.points.mapIndexed { index, point ->
-                                if (index == draggedPoint) point.copy(position = normalized) else point
-                            })
+                    } else {
+                        -1
+                    }
+                    do {
+                        val event = awaitPointerEvent()
+                        val pressed = event.changes.filter { it.pressed }
+                        if (pressed.isEmpty()) break
+                        val pan = event.calculatePan()
+                        val zoom = event.calculateZoom()
+                        totalPan += pan
+                        moved = moved || pressed.size > 1 || totalPan.getDistance() > viewConfiguration.touchSlop
+                        if (moved) {
+                            if (draggedPoint >= 0 && pressed.size == 1) {
+                                val position = pressed.first().position
+                                val normalized = PerspectiveGeometry.toNormalized(
+                                    Point2(position.x, position.y),
+                                    imageBounds,
+                                    currentTransform,
+                                )
+                                onPerspectiveChange {
+                                    it.copy(points = it.points.mapIndexed { index, point ->
+                                        if (index == draggedPoint) point.copy(position = normalized) else point
+                                    })
+                                }
+                            } else {
+                                val centroid = event.calculateCentroid()
+                                val newScale = (currentTransform.scale * zoom).coerceIn(0.18f, 8f)
+                                val appliedZoom = newScale / currentTransform.scale
+                                currentTransform = ViewTransform(
+                                    scale = newScale,
+                                    offsetX = centroid.x +
+                                        (currentTransform.offsetX - centroid.x) * appliedZoom + pan.x,
+                                    offsetY = centroid.y +
+                                        (currentTransform.offsetY - centroid.y) * appliedZoom + pan.y,
+                                )
+                                transform = currentTransform
+                            }
+                            event.changes.forEach { it.consume() }
                         }
-                        change.consume()
+                    } while (event.changes.any { it.pressed })
+
+                    if (!moved && mode == EditorMode.PERSPECTIVE) {
+                        val tap = down.position
+                        val points = gesturePerspective.points.map {
+                            PerspectiveGeometry.toWorkspace(it.position, imageBounds, originalTransform)
+                        }
+                        val indicatorIndex = points.indexOfFirst { point ->
+                            PerspectiveGeometry.edgeIndicator(point, size.width.toFloat(), size.height.toFloat())
+                                ?.let { PerspectiveGeometry.distance(it, Point2(tap.x, tap.y)) < 32f } == true
+                        }
+                        if (indicatorIndex >= 0) {
+                            val point = points[indicatorIndex]
+                            transform = originalTransform.copy(
+                                offsetX = originalTransform.offsetX + size.width / 2f - point.x,
+                                offsetY = originalTransform.offsetY + size.height / 2f - point.y,
+                            )
+                        } else {
+                            val displayed = PerspectiveGeometry.transformedBounds(imageBounds, originalTransform)
+                            if (tap.x in displayed.left..displayed.right && tap.y in displayed.top..displayed.bottom) {
+                                val anchor = PerspectiveGeometry.toNormalized(
+                                    Point2(tap.x, tap.y),
+                                    imageBounds,
+                                    originalTransform,
+                                )
+                                onPerspectiveChange { it.copy(anchor = anchor) }
+                            }
+                        }
                     }
                 }
             }

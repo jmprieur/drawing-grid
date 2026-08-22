@@ -32,22 +32,22 @@ class DrawingGridScreenTest {
             DrawingGridTheme {
                 DrawingGridScreen("content://photo", GridSettings(), {}, { saveClicked = true }, {})
             }
-
-            @Test
-            fun photoStateSwitchesToPerspectiveControls() {
-                composeRule.setContent {
-                    DrawingGridTheme {
-                        DrawingGridScreen("content://photo", GridSettings(), {}, {}, {})
-                    }
-                }
-
-                composeRule.onNodeWithTag("perspective_tab").performClick()
-
-                composeRule.onNodeWithText("Show perspective").assertIsDisplayed()
-            }
         }
 
         composeRule.onNodeWithTag("save_grid").assertIsDisplayed().performClick()
         composeRule.runOnIdle { assertTrue(saveClicked) }
+    }
+
+    @Test
+    fun photoStateSwitchesToPerspectiveControls() {
+        composeRule.setContent {
+            DrawingGridTheme {
+                DrawingGridScreen("content://photo", GridSettings(), {}, {}, {})
+            }
+        }
+
+        composeRule.onNodeWithTag("perspective_tab").performClick()
+
+        composeRule.onNodeWithText("Show perspective").assertIsDisplayed()
     }
 }

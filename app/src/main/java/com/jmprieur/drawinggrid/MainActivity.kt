@@ -2,10 +2,12 @@ package com.jmprieur.drawinggrid
 
 import android.graphics.ImageDecoder
 import android.net.Uri
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts.CreateDocument
 import androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia
 import androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia.ImageOnly
 import androidx.activity.result.PickVisualMediaRequest
@@ -21,7 +23,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
@@ -41,6 +42,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -59,6 +61,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 class MainActivity : ComponentActivity() {
@@ -71,15 +74,38 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 private fun DrawingGridApp(viewModel: DrawingGridViewModel = viewModel()) {
+    val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
     val photoUri by viewModel.photoUri.collectAsStateWithLifecycle()
     val settings by viewModel.settings.collectAsStateWithLifecycle()
     val picker = rememberLauncherForActivityResult(PickVisualMedia()) { uri ->
         uri?.let { viewModel.selectPhoto(it.toString()) }
     }
+    val saver = rememberLauncherForActivityResult(CreateDocument("image/png")) { destination ->
+        val source = photoUri?.let(Uri::parse)
+        if (destination != null && source != null) {
+            coroutineScope.launch {
+                val result = GridImageExporter.export(context, source, destination, settings)
+                Toast.makeText(
+                    context,
+                    if (result.isSuccess) "Saved picture with grid" else "Could not save picture",
+                    Toast.LENGTH_SHORT,
+                ).show()
+            }
+        }
+    }
     DrawingGridScreen(
         photoUri = photoUri,
         settings = settings,
         onChoosePhoto = { picker.launch(PickVisualMediaRequest(ImageOnly)) },
+        onSavePhoto = {
+            photoUri?.let { uri ->
+                coroutineScope.launch {
+                    val fileName = GridImageExporter.suggestedFileName(context, Uri.parse(uri), settings)
+                    saver.launch(fileName)
+                }
+            }
+        },
         onSettingsChange = viewModel::updateSettings,
     )
 }
@@ -90,6 +116,7 @@ fun DrawingGridScreen(
     photoUri: String?,
     settings: GridSettings,
     onChoosePhoto: () -> Unit,
+    onSavePhoto: () -> Unit,
     onSettingsChange: ((GridSettings) -> GridSettings) -> Unit,
 ) {
     Scaffold(
@@ -110,6 +137,7 @@ fun DrawingGridScreen(
                 uri = photoUri,
                 settings = settings,
                 onChoosePhoto = onChoosePhoto,
+                onSavePhoto = onSavePhoto,
                 onSettingsChange = onSettingsChange,
             )
         }
@@ -139,6 +167,7 @@ private fun PhotoEditor(
     uri: String,
     settings: GridSettings,
     onChoosePhoto: () -> Unit,
+    onSavePhoto: () -> Unit,
     onSettingsChange: ((GridSettings) -> GridSettings) -> Unit,
 ) {
     Column(modifier.fillMaxSize()) {
@@ -146,6 +175,7 @@ private fun PhotoEditor(
         GridControls(
             settings = settings,
             onChoosePhoto = onChoosePhoto,
+            onSavePhoto = onSavePhoto,
             onSettingsChange = onSettingsChange,
             modifier = Modifier.fillMaxWidth(),
         )
@@ -211,6 +241,7 @@ private fun FittedImageWithGrid(image: ImageBitmap, settings: GridSettings, modi
 private fun GridControls(
     settings: GridSettings,
     onChoosePhoto: () -> Unit,
+    onSavePhoto: () -> Unit,
     onSettingsChange: ((GridSettings) -> GridSettings) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -225,8 +256,17 @@ private fun GridControls(
                     checked = settings.visible,
                     onCheckedChange = { value -> onSettingsChange { it.copy(visible = value) } },
                 )
-                Spacer(Modifier.width(8.dp))
-                OutlinedButton(onClick = onChoosePhoto) { Text("Replace photo") }
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(onClick = onChoosePhoto, modifier = Modifier.weight(1f)) {
+                    Text("Replace photo")
+                }
+                Button(
+                    onClick = onSavePhoto,
+                    modifier = Modifier.weight(1f).testTag("save_grid"),
+                ) {
+                    Text("Save with grid")
+                }
             }
             SettingSlider("Rows: ${settings.rows}", settings.rows.toFloat(), 1f..12f, steps = 10) {
                 onSettingsChange { current -> current.copy(rows = it.toInt()) }
@@ -279,5 +319,5 @@ fun DrawingGridTheme(content: @Composable () -> Unit) {
 @Preview(showBackground = true)
 @Composable
 private fun EmptyStatePreview() {
-    DrawingGridTheme { DrawingGridScreen(null, GridSettings(), {}, {}) }
+    DrawingGridTheme { DrawingGridScreen(null, GridSettings(), {}, {}, {}) }
 }

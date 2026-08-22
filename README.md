@@ -9,6 +9,7 @@ Drawing Grid is an offline Android drawing aid. Choose a reference photo from yo
 - Fits portrait, landscape, and square photos while preserving aspect ratio.
 - Clips the grid precisely to the rendered image, including after orientation changes.
 - Adjusts independent cell rows and columns (default: 4 × 4), grid visibility, color, opacity, and line thickness.
+- Saves a flattened PNG through Android's system file picker, using a name such as `photo-grid4x8.png`.
 - Follows the system theme, including dark mode.
 
 ```mermaid
@@ -18,6 +19,7 @@ flowchart LR
     C --> D[Fitted reference image]
     D --> E[Adjust grid controls]
     E --> F[Use as drawing reference]
+    E --> G[Save photo with grid]
 ```
 
 ## Architecture
@@ -61,17 +63,17 @@ Copy the APK to the phone and open it with a file manager, or use `adb install a
 
 ## Privacy
 
-Drawing Grid makes no network requests and declares no internet permission. A selected photo remains local to the device; the app reads it only to display the drawing reference and does not upload, modify, export, or share it.
+Drawing Grid makes no network requests and declares no internet permission. A selected photo remains local to the device; the app reads it only to display the drawing reference or to save a grid copy to a location you choose. The original is never modified.
 
 ## Current limitations
 
-- No export or sharing of a flattened image.
+- No direct sharing of a flattened image.
 - No zoom, pan, crop, or rotation controls.
 - The picker grants access only as provided by Android; choose the image again if the system later revokes access.
 
 ## Roadmap
 
-- Export and share
+- Share exported images
 - OneDrive and Google Drive sources
 - Perspective and vanishing points
 - Grayscale/value simplification

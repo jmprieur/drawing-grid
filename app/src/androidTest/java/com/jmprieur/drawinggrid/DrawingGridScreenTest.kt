@@ -5,6 +5,7 @@ import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 
@@ -33,6 +34,6 @@ class DrawingGridScreenTest {
         }
 
         composeRule.onNodeWithTag("save_grid").assertIsDisplayed().performClick()
-        composeRule.runOnIdle { assert(saveClicked) }
+        composeRule.runOnIdle { assertTrue(saveClicked) }
     }
 }

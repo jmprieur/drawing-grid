@@ -8,6 +8,7 @@ import android.graphics.ImageDecoder
 import android.graphics.Paint
 import android.net.Uri
 import android.provider.OpenableColumns
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.IOException
@@ -15,19 +16,21 @@ import java.io.IOException
 object GridImageExporter {
     suspend fun suggestedFileName(context: Context, source: Uri, settings: GridSettings): String =
         withContext(Dispatchers.IO) {
-            val displayName = context.contentResolver.query(
-                source,
-                arrayOf(OpenableColumns.DISPLAY_NAME),
-                null,
-                null,
-                null,
-            )?.use { cursor ->
-                if (cursor.moveToFirst()) {
-                    cursor.getString(cursor.getColumnIndexOrThrow(OpenableColumns.DISPLAY_NAME))
-                } else {
-                    null
+            val displayName = runCatching {
+                context.contentResolver.query(
+                    source,
+                    arrayOf(OpenableColumns.DISPLAY_NAME),
+                    null,
+                    null,
+                    null,
+                )?.use { cursor ->
+                    if (cursor.moveToFirst()) {
+                        cursor.getString(cursor.getColumnIndexOrThrow(OpenableColumns.DISPLAY_NAME))
+                    } else {
+                        null
+                    }
                 }
-            }
+            }.getOrNull()
             suggestedFileName(displayName, settings.rows, settings.columns)
         }
 
@@ -37,30 +40,38 @@ object GridImageExporter {
         destination: Uri,
         settings: GridSettings,
     ): Result<Unit> = withContext(Dispatchers.IO) {
-        runCatching {
+        try {
             val sourceBitmap = ImageDecoder.decodeBitmap(
                 ImageDecoder.createSource(context.contentResolver, source),
             ) { decoder, _, _ ->
                 decoder.allocator = ImageDecoder.ALLOCATOR_SOFTWARE
             }
-            val outputBitmap = Bitmap.createBitmap(
-                sourceBitmap.width,
-                sourceBitmap.height,
-                Bitmap.Config.ARGB_8888,
-            )
             try {
-                val canvas = Canvas(outputBitmap)
-                canvas.drawBitmap(sourceBitmap, 0f, 0f, null)
-                drawGrid(canvas, outputBitmap.width, outputBitmap.height, settings)
-                context.contentResolver.openOutputStream(destination, "w")?.use { output ->
-                    if (!outputBitmap.compress(Bitmap.CompressFormat.PNG, 100, output)) {
-                        throw IOException("Could not encode grid image")
-                    }
-                } ?: throw IOException("Could not open destination")
+                val outputBitmap = Bitmap.createBitmap(
+                    sourceBitmap.width,
+                    sourceBitmap.height,
+                    Bitmap.Config.ARGB_8888,
+                )
+                try {
+                    val canvas = Canvas(outputBitmap)
+                    canvas.drawBitmap(sourceBitmap, 0f, 0f, null)
+                    drawGrid(canvas, outputBitmap.width, outputBitmap.height, settings)
+                    context.contentResolver.openOutputStream(destination, "w")?.use { output ->
+                        if (!outputBitmap.compress(Bitmap.CompressFormat.PNG, 100, output)) {
+                            throw IOException("Could not encode grid image")
+                        }
+                    } ?: throw IOException("Could not open destination")
+                } finally {
+                    outputBitmap.recycle()
+                }
             } finally {
                 sourceBitmap.recycle()
-                outputBitmap.recycle()
             }
+            Result.success(Unit)
+        } catch (exception: CancellationException) {
+            throw exception
+        } catch (exception: Exception) {
+            Result.failure(exception)
         }
     }
 

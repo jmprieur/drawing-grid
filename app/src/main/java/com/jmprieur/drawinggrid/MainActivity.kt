@@ -153,6 +153,7 @@ private fun PhotoEditor(
 }
 
 @Composable
+@Suppress("ProduceStateDoesNotAssignValue")
 private fun PhotoArea(uri: String, settings: GridSettings, modifier: Modifier = Modifier) {
     val context = LocalContext.current
     val bitmap by produceState<ImageBitmap?>(initialValue = null, uri) {

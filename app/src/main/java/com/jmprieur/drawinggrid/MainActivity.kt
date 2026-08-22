@@ -238,7 +238,7 @@ private fun GridControls(
             }
             Text("Line color", fontWeight = FontWeight.Medium)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                listOf("White" to 0xFFFFFFFF, "Black" to 0xFF000000, "Yellow" to 0xFFFFD740, "Red" to 0xFFFF5252).forEach { (name, color) ->
+                listOf("White" to 0xFFFFFFFFL, "Black" to 0xFF000000L, "Yellow" to 0xFFFFD740L, "Red" to 0xFFFF5252L).forEach { (name, color) ->
                     FilterChip(
                         selected = settings.color == color,
                         onClick = { onSettingsChange { current -> current.copy(color = color) } },

@@ -3,7 +3,6 @@ package com.jmprieur.drawinggrid
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.getStateFlow
 import java.io.Serializable
 
 data class GridSettings(

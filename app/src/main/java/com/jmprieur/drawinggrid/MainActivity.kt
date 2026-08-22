@@ -156,12 +156,7 @@ private fun PhotoEditor(
 private fun PhotoArea(uri: String, settings: GridSettings, modifier: Modifier = Modifier) {
     val context = LocalContext.current
     val bitmap by produceState<ImageBitmap?>(initialValue = null, uri) {
-        value = withContext(Dispatchers.IO) {
-            runCatching {
-                ImageDecoder.decodeBitmap(ImageDecoder.createSource(context.contentResolver, Uri.parse(uri)))
-                    .asImageBitmap()
-            }.getOrNull()
-        }
+        value = decodePhoto(context, uri)
     }
     Box(modifier.background(MaterialTheme.colorScheme.surfaceVariant).clipToBounds()) {
         bitmap?.let { image ->
@@ -173,6 +168,14 @@ private fun PhotoArea(uri: String, settings: GridSettings, modifier: Modifier = 
         )
     }
 }
+
+private suspend fun decodePhoto(context: android.content.Context, uri: String): ImageBitmap? =
+    withContext(Dispatchers.IO) {
+        runCatching {
+            ImageDecoder.decodeBitmap(ImageDecoder.createSource(context.contentResolver, Uri.parse(uri)))
+                .asImageBitmap()
+        }.getOrNull()
+    }
 
 @Composable
 private fun FittedImageWithGrid(image: ImageBitmap, settings: GridSettings, modifier: Modifier) {

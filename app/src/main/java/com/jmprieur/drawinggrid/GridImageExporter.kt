@@ -77,7 +77,8 @@ object GridImageExporter {
 
     private fun drawGrid(canvas: Canvas, width: Int, height: Int, settings: GridSettings) {
         val sourceColor = settings.color.toInt()
-        val alpha = (Color.alpha(sourceColor) * settings.opacity).toInt().coerceIn(0, 255)
+        val sourceAlpha = ((settings.color ushr 24) and 0xFF).toInt()
+        val alpha = (sourceAlpha * settings.opacity).toInt().coerceIn(0, 255)
         val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
             color = Color.argb(alpha, Color.red(sourceColor), Color.green(sourceColor), Color.blue(sourceColor))
             strokeWidth = settings.thickness

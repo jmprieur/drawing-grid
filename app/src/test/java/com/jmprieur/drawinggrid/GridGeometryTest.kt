@@ -2,6 +2,7 @@ package com.jmprieur.drawinggrid
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class GridGeometryTest {
@@ -51,5 +52,39 @@ class GridGeometryTest {
         val bounds = ImageBounds(0f, 0f, 100f, 100f)
         assertEquals(emptyList<GridLine>(), GridGeometry.lines(bounds, 0, 4))
         assertEquals(emptyList<GridLine>(), GridGeometry.lines(bounds, 4, 0))
+    }
+
+    @Test
+    fun `normalized points outside image map beyond displayed bounds`() {
+        val image = ImageBounds(100f, 50f, 400f, 200f)
+        val transform = ViewTransform(scale = 0.5f, offsetX = 10f, offsetY = 20f)
+
+        val workspace = PerspectiveGeometry.toWorkspace(NormalizedPoint(1.5f, -0.5f), image, transform)
+
+        assertEquals(Point2(360f, -5f), workspace)
+        assertEquals(
+            NormalizedPoint(1.5f, -0.5f),
+            PerspectiveGeometry.toNormalized(workspace, image, transform),
+        )
+    }
+
+    @Test
+    fun `fit perspective keeps image at a usable size for distant points`() {
+        val transform = PerspectiveGeometry.fitPerspective(
+            viewportWidth = 1000f,
+            viewportHeight = 800f,
+            image = ImageBounds(100f, 100f, 800f, 600f),
+            points = listOf(NormalizedPoint(20f, 0.5f)),
+        )
+
+        assertTrue(transform.scale >= 0.28f)
+    }
+
+    @Test
+    fun `outside point gets an edge indicator`() {
+        val indicator = PerspectiveGeometry.edgeIndicator(Point2(900f, 300f), 600f, 400f)
+
+        assertEquals(Point2(578f, 246.33333f), indicator)
+        assertNull(PerspectiveGeometry.edgeIndicator(Point2(300f, 200f), 600f, 400f))
     }
 }

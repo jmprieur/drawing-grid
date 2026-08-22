@@ -9,6 +9,9 @@ Drawing Grid is an offline Android drawing aid. Choose a reference photo from yo
 - Fits portrait, landscape, and square photos while preserving aspect ratio.
 - Clips the grid precisely to the rendered image, including after orientation changes.
 - Adjusts independent cell rows and columns (default: 4 × 4), grid visibility, color, opacity, and line thickness.
+- Detects up to three perspective vanishing points locally, with manual point placement and correction.
+- Draws perspective guides from a tapped image point and represents off-image points with directional edge markers.
+- Pans and zooms a shared image, grid, and perspective workspace, with Fit image and Fit perspective actions.
 - Saves a flattened PNG through Android's system file picker, using a name such as `photo-grid4x8.png`.
 - Follows the system theme, including dark mode.
 
@@ -24,7 +27,7 @@ flowchart LR
 
 ## Architecture
 
-The app is a Kotlin, Jetpack Compose, single-activity application. `DrawingGridViewModel` owns the unidirectional UI state and persists the selected URI and grid settings through `SavedStateHandle`. `GridGeometry` is a pure Kotlin component that calculates the `ContentScale.Fit` image rectangle and grid line positions; Compose `Canvas` draws the image and clipped grid.
+The app is a Kotlin, Jetpack Compose, single-activity application. `DrawingGridViewModel` owns the unidirectional UI state and persists the selected URI, grid settings, and normalized perspective points through `SavedStateHandle`. `GridGeometry` and `PerspectiveGeometry` calculate the fitted image, overlays, and shared view transform; Compose `Canvas` draws the image and overlays. Perspective detection is performed offline.
 
 ## Prerequisites
 
@@ -68,13 +71,12 @@ Drawing Grid makes no network requests and declares no internet permission. A se
 ## Current limitations
 
 - No direct sharing of a flattened image.
-- No zoom, pan, crop, or rotation controls.
+- No crop or rotation controls.
 - The picker grants access only as provided by Android; choose the image again if the system later revokes access.
 
 ## Roadmap
 
 - Share exported images
 - OneDrive and Google Drive sources
-- Perspective and vanishing points
 - Grayscale/value simplification
 - Contour and edge assistance

@@ -299,13 +299,13 @@ private fun ImageWorkspace(
         containerSize.width.toFloat(), containerSize.height.toFloat(), image.width.toFloat(), image.height.toFloat(),
     )
     LaunchedEffect(fitRequest) { transform = ViewTransform() }
-    LaunchedEffect(fitPerspectiveRequest, imageBounds, perspective.points) {
+    LaunchedEffect(fitPerspectiveRequest, imageBounds) {
         imageBounds?.let {
             transform = PerspectiveGeometry.fitPerspective(
                 containerSize.width.toFloat(),
                 containerSize.height.toFloat(),
                 it,
-                perspective.points.filter { point -> point.enabled }.map { point -> point.position },
+                currentPerspective.points.filter { point -> point.enabled }.map { point -> point.position },
             )
         }
     }

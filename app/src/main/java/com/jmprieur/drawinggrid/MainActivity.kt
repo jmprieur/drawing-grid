@@ -297,8 +297,8 @@ private fun ImageWorkspace(
     val imageBounds = GridGeometry.fittedBounds(
         containerSize.width.toFloat(), containerSize.height.toFloat(), image.width.toFloat(), image.height.toFloat(),
     )
-    androidx.compose.runtime.LaunchedEffect(fitRequest) { transform = ViewTransform() }
-    androidx.compose.runtime.LaunchedEffect(fitPerspectiveRequest, imageBounds, perspective.points) {
+    LaunchedEffect(fitRequest) { transform = ViewTransform() }
+    LaunchedEffect(fitPerspectiveRequest, imageBounds, perspective.points) {
         imageBounds?.let {
             transform = PerspectiveGeometry.fitPerspective(
                 containerSize.width.toFloat(),

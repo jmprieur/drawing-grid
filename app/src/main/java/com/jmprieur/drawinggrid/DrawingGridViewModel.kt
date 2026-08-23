@@ -70,7 +70,7 @@ class DrawingGridViewModel internal constructor(
         mutableSettings.value = GridSettings()
         mutablePerspective.value = PerspectiveSettings()
         persistenceScope.launch {
-            if (previousUri != null && previousUri != uri) repository.save(previousUri, previousSettings)
+            if (previousUri != null) repository.save(previousUri, previousSettings)
             repository.selectPhoto(uri)
             val restored = repository.load(uri)
             if (mutablePhotoUri.value == uri) {

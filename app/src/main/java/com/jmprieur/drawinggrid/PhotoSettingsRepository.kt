@@ -112,8 +112,9 @@ class DataStorePhotoSettingsRepository(
         fun encodePoints(points: List<VanishingPoint>): String =
             points.joinToString(";") { "${it.position.x},${it.position.y},${it.enabled}" }
 
-        fun decodePoints(value: String?): List<VanishingPoint> =
-            value.orEmpty().split(';').mapNotNull { encoded ->
+        fun decodePoints(value: String?): List<VanishingPoint> {
+            if (value.isNullOrEmpty()) return emptyList()
+            return value.split(';').mapNotNull { encoded ->
                 val fields = encoded.split(',')
                 if (fields.size != 3) return@mapNotNull null
                 val x = fields[0].toFloatOrNull() ?: return@mapNotNull null
@@ -121,5 +122,6 @@ class DataStorePhotoSettingsRepository(
                 val enabled = fields[2].toBooleanStrictOrNull() ?: return@mapNotNull null
                 VanishingPoint(NormalizedPoint(x, y), enabled)
             }
+        }
     }
 }

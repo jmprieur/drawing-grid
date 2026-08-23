@@ -10,6 +10,7 @@ Drawing Grid is an offline Android drawing aid. Choose a reference photo from yo
 - Clips the grid precisely to the rendered image, including after orientation changes.
 - Adjusts independent cell rows and columns (default: 4 × 4), grid visibility, color, opacity, and line thickness.
 - Detects up to three perspective vanishing points locally, with manual point placement and correction.
+- Restores grid and perspective settings separately for each selected photo.
 - Draws perspective guides from a tapped image point and represents off-image points with directional edge markers.
 - Pans and zooms a shared image, grid, and perspective workspace, with Fit image and Fit perspective actions.
 - Saves a flattened PNG through Android's system file picker, using a name such as `photo-grid4x8.png`.
@@ -27,7 +28,7 @@ flowchart LR
 
 ## Architecture
 
-The app is a Kotlin, Jetpack Compose, single-activity application. `DrawingGridViewModel` owns the unidirectional UI state and persists the selected URI, grid settings, and normalized perspective points through `SavedStateHandle`. `GridGeometry` and `PerspectiveGeometry` calculate the fitted image, overlays, and shared view transform; Compose `Canvas` draws the image and overlays. Perspective detection is performed offline.
+The app is a Kotlin, Jetpack Compose, single-activity application. `DrawingGridViewModel` owns the unidirectional UI state, while an app-private DataStore persists grid settings and normalized perspective points under a hash of each photo URI. `GridGeometry` and `PerspectiveGeometry` calculate the fitted image, overlays, and shared view transform; Compose `Canvas` draws the image and overlays. Perspective detection is performed offline.
 
 ## Prerequisites
 

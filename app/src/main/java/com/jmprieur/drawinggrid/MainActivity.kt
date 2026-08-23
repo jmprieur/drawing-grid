@@ -45,9 +45,9 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
@@ -195,8 +195,9 @@ private fun PhotoEditor(
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    val bitmap by produceState<Bitmap?>(initialValue = null, uri) {
-        value = decodePhoto(context, uri)
+    var bitmap by remember(uri) { mutableStateOf<Bitmap?>(null) }
+    LaunchedEffect(uri) {
+        bitmap = decodePhoto(context, uri)
     }
     var mode by remember { mutableStateOf(EditorMode.GRID) }
     var fitRequest by remember { mutableIntStateOf(0) }

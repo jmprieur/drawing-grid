@@ -45,23 +45,25 @@ class DataStorePhotoSettingsRepository(
         val key = photoKey(uri)
         if (values[booleanPreferencesKey("$key.exists")] != true) return PhotoSettings()
 
+        val gridDefaults = GridSettings()
         val grid = GridSettings(
-            rows = values[intPreferencesKey("$key.grid.rows")] ?: 4,
-            columns = values[intPreferencesKey("$key.grid.columns")] ?: 4,
-            visible = values[booleanPreferencesKey("$key.grid.visible")] ?: true,
-            color = values[longPreferencesKey("$key.grid.color")] ?: 0xFFFFFFFF,
-            opacity = values[floatPreferencesKey("$key.grid.opacity")] ?: 0.8f,
-            thickness = values[floatPreferencesKey("$key.grid.thickness")] ?: 2f,
+            rows = values[intPreferencesKey("$key.grid.rows")] ?: gridDefaults.rows,
+            columns = values[intPreferencesKey("$key.grid.columns")] ?: gridDefaults.columns,
+            visible = values[booleanPreferencesKey("$key.grid.visible")] ?: gridDefaults.visible,
+            color = values[longPreferencesKey("$key.grid.color")] ?: gridDefaults.color,
+            opacity = values[floatPreferencesKey("$key.grid.opacity")] ?: gridDefaults.opacity,
+            thickness = values[floatPreferencesKey("$key.grid.thickness")] ?: gridDefaults.thickness,
         )
         val anchorX = values[floatPreferencesKey("$key.perspective.anchor.x")]
         val anchorY = values[floatPreferencesKey("$key.perspective.anchor.y")]
+        val perspectiveDefaults = PerspectiveSettings()
         val perspective = PerspectiveSettings(
-            visible = values[booleanPreferencesKey("$key.perspective.visible")] ?: true,
+            visible = values[booleanPreferencesKey("$key.perspective.visible")] ?: perspectiveDefaults.visible,
             points = decodePoints(values[stringPreferencesKey("$key.perspective.points")]),
             anchor = if (anchorX != null && anchorY != null) NormalizedPoint(anchorX, anchorY) else null,
-            color = values[longPreferencesKey("$key.perspective.color")] ?: 0xFFFFD740L,
-            opacity = values[floatPreferencesKey("$key.perspective.opacity")] ?: 0.9f,
-            thickness = values[floatPreferencesKey("$key.perspective.thickness")] ?: 2f,
+            color = values[longPreferencesKey("$key.perspective.color")] ?: perspectiveDefaults.color,
+            opacity = values[floatPreferencesKey("$key.perspective.opacity")] ?: perspectiveDefaults.opacity,
+            thickness = values[floatPreferencesKey("$key.perspective.thickness")] ?: perspectiveDefaults.thickness,
         )
         return PhotoSettings(grid, perspective)
     }

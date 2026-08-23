@@ -8,6 +8,8 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -47,6 +49,7 @@ class DrawingGridViewModel internal constructor(
     private val mutablePhotoUri = MutableStateFlow(savedStateHandle.get<String>(PHOTO_URI))
     private val mutableSettings = MutableStateFlow(GridSettings())
     private val mutablePerspective = MutableStateFlow(PerspectiveSettings())
+    private var saveJob: Job? = null
 
     val photoUri: StateFlow<String?> = mutablePhotoUri
     val settings: StateFlow<GridSettings> = mutableSettings
@@ -62,6 +65,7 @@ class DrawingGridViewModel internal constructor(
     fun selectPhoto(uri: String) {
         val previousUri = mutablePhotoUri.value
         val previousSettings = PhotoSettings(mutableSettings.value, mutablePerspective.value)
+        saveJob?.cancel()
         setCurrentPhoto(uri)
         mutableSettings.value = GridSettings()
         mutablePerspective.value = PerspectiveSettings()
@@ -88,6 +92,7 @@ class DrawingGridViewModel internal constructor(
 
     fun resetCurrentPhoto() {
         val uri = mutablePhotoUri.value ?: return
+        saveJob?.cancel()
         mutableSettings.value = GridSettings()
         mutablePerspective.value = PerspectiveSettings()
         persistenceScope.launch { repository.reset(uri) }
@@ -108,7 +113,11 @@ class DrawingGridViewModel internal constructor(
     private fun saveCurrentPhoto() {
         val uri = mutablePhotoUri.value ?: return
         val snapshot = PhotoSettings(mutableSettings.value, mutablePerspective.value)
-        persistenceScope.launch { repository.save(uri, snapshot) }
+        saveJob?.cancel()
+        saveJob = persistenceScope.launch {
+            delay(SAVE_DEBOUNCE_MILLIS)
+            repository.save(uri, snapshot)
+        }
     }
 
     companion object {
@@ -124,5 +133,6 @@ class DrawingGridViewModel internal constructor(
         }
 
         private const val PHOTO_URI = "photo_uri"
+        private const val SAVE_DEBOUNCE_MILLIS = 250L
     }
 }

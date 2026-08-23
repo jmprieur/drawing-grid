@@ -97,7 +97,7 @@ class DataStorePhotoSettingsRepository(
     override suspend fun reset(uri: String) {
         val prefix = "${photoKey(uri)}."
         dataStore.edit { values ->
-            values.asMap().keys.filter { it.name.startsWith(prefix) }.forEach(values::remove)
+            values.asMap().keys.filter { it.name.startsWith(prefix) }.forEach { values.remove(it) }
         }
     }
 

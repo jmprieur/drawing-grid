@@ -294,19 +294,27 @@ private fun ImageWorkspace(
     var containerSize by remember { mutableStateOf(IntSize.Zero) }
     val transformState = remember(image) { mutableStateOf(ViewTransform()) }
     var transform by transformState
+    var handledFitRequest by remember(image) { mutableIntStateOf(fitRequest) }
+    var handledFitPerspectiveRequest by remember(image) { mutableIntStateOf(fitPerspectiveRequest) }
     val currentPerspective by rememberUpdatedState(perspective)
     val imageBounds = GridGeometry.fittedBounds(
         containerSize.width.toFloat(), containerSize.height.toFloat(), image.width.toFloat(), image.height.toFloat(),
     )
-    LaunchedEffect(fitRequest) { transform = ViewTransform() }
-    LaunchedEffect(fitPerspectiveRequest, imageBounds) {
-        imageBounds?.let {
+    LaunchedEffect(fitRequest) {
+        if (fitRequest != handledFitRequest) {
+            transform = ViewTransform()
+            handledFitRequest = fitRequest
+        }
+    }
+    LaunchedEffect(fitPerspectiveRequest) {
+        if (fitPerspectiveRequest != handledFitPerspectiveRequest && imageBounds != null) {
             transform = PerspectiveGeometry.fitPerspective(
                 containerSize.width.toFloat(),
                 containerSize.height.toFloat(),
-                it,
+                imageBounds,
                 currentPerspective.points.filter { point -> point.enabled }.map { point -> point.position },
             )
+            handledFitPerspectiveRequest = fitPerspectiveRequest
         }
     }
     val gestureModifier = modifier

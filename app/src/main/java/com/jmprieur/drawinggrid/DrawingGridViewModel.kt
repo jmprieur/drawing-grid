@@ -1,9 +1,12 @@
 package com.jmprieur.drawinggrid
 
-import android.app.Application
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider.AndroidViewModelFactory.Companion.APPLICATION_KEY
+import androidx.lifecycle.createSavedStateHandle
 import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.viewmodel.initializer
+import androidx.lifecycle.viewmodel.viewModelFactory
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -40,12 +43,6 @@ class DrawingGridViewModel internal constructor(
     private val repository: PhotoSettingsRepository,
     externalScope: CoroutineScope?,
 ) : ViewModel() {
-    constructor(application: Application, savedStateHandle: SavedStateHandle) : this(
-        savedStateHandle,
-        DataStorePhotoSettingsRepository(application),
-        null,
-    )
-
     private val persistenceScope = externalScope ?: viewModelScope
     private val mutablePhotoUri = MutableStateFlow(savedStateHandle.get<String>(PHOTO_URI))
     private val mutableSettings = MutableStateFlow(GridSettings())
@@ -114,7 +111,18 @@ class DrawingGridViewModel internal constructor(
         persistenceScope.launch { repository.save(uri, snapshot) }
     }
 
-    private companion object {
-        const val PHOTO_URI = "photo_uri"
+    companion object {
+        val Factory = viewModelFactory {
+            initializer {
+                val application = checkNotNull(this[APPLICATION_KEY])
+                DrawingGridViewModel(
+                    createSavedStateHandle(),
+                    DataStorePhotoSettingsRepository(application),
+                    null,
+                )
+            }
+        }
+
+        private const val PHOTO_URI = "photo_uri"
     }
 }

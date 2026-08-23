@@ -88,7 +88,7 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-private fun DrawingGridApp(viewModel: DrawingGridViewModel = viewModel()) {
+private fun DrawingGridApp(viewModel: DrawingGridViewModel = viewModel(factory = DrawingGridViewModel.Factory)) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     val photoUri by viewModel.photoUri.collectAsStateWithLifecycle()

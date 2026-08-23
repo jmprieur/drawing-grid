@@ -3,6 +3,7 @@ package com.jmprieur.drawinggrid
 import android.graphics.ImageDecoder
 import android.graphics.Bitmap
 import android.net.Uri
+import android.content.Intent
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -94,7 +95,15 @@ private fun DrawingGridApp(viewModel: DrawingGridViewModel = viewModel()) {
     val settings by viewModel.settings.collectAsStateWithLifecycle()
     val perspective by viewModel.perspective.collectAsStateWithLifecycle()
     val picker = rememberLauncherForActivityResult(PickVisualMedia()) { uri ->
-        uri?.let { viewModel.selectPhoto(it.toString()) }
+        uri?.let {
+            runCatching {
+                context.contentResolver.takePersistableUriPermission(
+                    it,
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION,
+                )
+            }
+            viewModel.selectPhoto(it.toString())
+        }
     }
     val saver = rememberLauncherForActivityResult(CreateDocument("image/png")) { destination ->
         val source = photoUri?.let(Uri::parse)
@@ -124,6 +133,7 @@ private fun DrawingGridApp(viewModel: DrawingGridViewModel = viewModel()) {
         },
         onSettingsChange = viewModel::updateSettings,
         onPerspectiveChange = viewModel::updatePerspective,
+        onResetPhotoSettings = viewModel::resetCurrentPhoto,
     )
 }
 
@@ -137,6 +147,7 @@ fun DrawingGridScreen(
     onSettingsChange: ((GridSettings) -> GridSettings) -> Unit,
     perspective: PerspectiveSettings = PerspectiveSettings(),
     onPerspectiveChange: ((PerspectiveSettings) -> PerspectiveSettings) -> Unit = {},
+    onResetPhotoSettings: () -> Unit = {},
 ) {
     Scaffold(
         topBar = {
@@ -160,6 +171,7 @@ fun DrawingGridScreen(
                 onSavePhoto = onSavePhoto,
                 onSettingsChange = onSettingsChange,
                 onPerspectiveChange = onPerspectiveChange,
+                onResetPhotoSettings = onResetPhotoSettings,
             )
         }
     }
@@ -192,6 +204,7 @@ private fun PhotoEditor(
     onSavePhoto: () -> Unit,
     onSettingsChange: ((GridSettings) -> GridSettings) -> Unit,
     onPerspectiveChange: ((PerspectiveSettings) -> PerspectiveSettings) -> Unit,
+    onResetPhotoSettings: () -> Unit,
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -224,6 +237,7 @@ private fun PhotoEditor(
             onSavePhoto = onSavePhoto,
             onSettingsChange = onSettingsChange,
             onPerspectiveChange = onPerspectiveChange,
+            onResetPhotoSettings = onResetPhotoSettings,
             onFitImage = { fitRequest++ },
             onFitPerspective = { fitPerspectiveRequest++ },
             onDetect = {
@@ -503,6 +517,7 @@ private fun EditorControls(
     onSavePhoto: () -> Unit,
     onSettingsChange: ((GridSettings) -> GridSettings) -> Unit,
     onPerspectiveChange: ((PerspectiveSettings) -> PerspectiveSettings) -> Unit,
+    onResetPhotoSettings: () -> Unit,
     onFitImage: () -> Unit,
     onFitPerspective: () -> Unit,
     onDetect: () -> Unit,
@@ -538,6 +553,12 @@ private fun EditorControls(
                     onFitPerspective,
                     onDetect,
                 )
+            }
+            OutlinedButton(
+                onClick = onResetPhotoSettings,
+                modifier = Modifier.fillMaxWidth().testTag("reset_photo_settings"),
+            ) {
+                Text("Reset photo settings")
             }
             Row(verticalAlignment = Alignment.CenterVertically) {
                 OutlinedButton(onClick = onChoosePhoto, modifier = Modifier.weight(1f)) {

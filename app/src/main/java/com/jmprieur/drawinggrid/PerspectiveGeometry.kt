@@ -10,6 +10,21 @@ data class Point2(val x: Float, val y: Float)
 data class ViewTransform(val scale: Float = 1f, val offsetX: Float = 0f, val offsetY: Float = 0f)
 
 object PerspectiveGeometry {
+    fun applyGesture(
+        transform: ViewTransform,
+        centroid: Point2,
+        pan: Point2,
+        zoom: Float,
+    ): ViewTransform {
+        val scale = (transform.scale * zoom).coerceIn(0.18f, 8f)
+        val appliedZoom = scale / transform.scale
+        return ViewTransform(
+            scale = scale,
+            offsetX = centroid.x + (transform.offsetX - centroid.x) * appliedZoom + pan.x,
+            offsetY = centroid.y + (transform.offsetY - centroid.y) * appliedZoom + pan.y,
+        )
+    }
+
     fun toWorkspace(point: NormalizedPoint, image: ImageBounds, transform: ViewTransform): Point2 =
         Point2(
             x = (image.left + point.x * image.width) * transform.scale + transform.offsetX,
@@ -69,6 +84,19 @@ object PerspectiveGeometry {
             if (abs(dy) < 0.001f) Float.MAX_VALUE else (height / 2f - margin) / abs(dy),
         )
         return Point2(center.x + dx * factor, center.y + dy * factor)
+    }
+
+    fun hitTestPosition(point: Point2, width: Float, height: Float): Point2 =
+        edgeIndicator(point, width, height) ?: point
+
+    fun movePoint(
+        point: NormalizedPoint,
+        delta: Point2,
+        image: ImageBounds,
+        transform: ViewTransform,
+    ): NormalizedPoint {
+        val workspace = toWorkspace(point, image, transform)
+        return toNormalized(Point2(workspace.x + delta.x, workspace.y + delta.y), image, transform)
     }
 
     fun distance(first: Point2, second: Point2): Float {

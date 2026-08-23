@@ -293,6 +293,7 @@ private fun ImageWorkspace(
 ) {
     var containerSize by remember { mutableStateOf(IntSize.Zero) }
     var transform by remember(image) { mutableStateOf(ViewTransform()) }
+    val latestTransform by rememberUpdatedState(transform)
     val currentPerspective by rememberUpdatedState(perspective)
     val imageBounds = GridGeometry.fittedBounds(
         containerSize.width.toFloat(), containerSize.height.toFloat(), image.width.toFloat(), image.height.toFloat(),
@@ -315,16 +316,25 @@ private fun ImageWorkspace(
                 awaitEachGesture {
                     val gesturePerspective = currentPerspective
                     val down = awaitFirstDown()
-                    val originalTransform = transform
-                    var currentTransform = transform
+                    val originalTransform = latestTransform
+                    var currentTransform = originalTransform
                     var moved = false
                     var totalPan = Offset.Zero
                     val draggedPoint = if (mode == EditorMode.PERSPECTIVE) {
                         gesturePerspective.points.indexOfFirst {
-                            PerspectiveGeometry.distance(
-                                PerspectiveGeometry.toWorkspace(it.position, imageBounds, transform),
+                            val workspace = PerspectiveGeometry.toWorkspace(
+                                it.position,
+                                imageBounds,
+                                originalTransform,
+                            )
+                            it.enabled && PerspectiveGeometry.distance(
+                                PerspectiveGeometry.hitTestPosition(
+                                    workspace,
+                                    size.width.toFloat(),
+                                    size.height.toFloat(),
+                                ),
                                 Point2(down.position.x, down.position.y),
-                            ) < 36f
+                            ) < 48.dp.toPx()
                         }
                     } else {
                         -1
@@ -339,11 +349,11 @@ private fun ImageWorkspace(
                         moved = moved || pressed.size > 1 || totalPan.getDistance() > viewConfiguration.touchSlop
                         if (moved) {
                             if (draggedPoint >= 0 && pressed.size == 1) {
-                                val position = pressed.first().position
-                                val normalized = PerspectiveGeometry.toNormalized(
-                                    Point2(position.x, position.y),
+                                val normalized = PerspectiveGeometry.movePoint(
+                                    gesturePerspective.points[draggedPoint].position,
+                                    Point2(totalPan.x, totalPan.y),
                                     imageBounds,
-                                    currentTransform,
+                                    originalTransform,
                                 )
                                 onPerspectiveChange {
                                     it.copy(points = it.points.mapIndexed { index, point ->
@@ -352,14 +362,11 @@ private fun ImageWorkspace(
                                 }
                             } else {
                                 val centroid = event.calculateCentroid()
-                                val newScale = (currentTransform.scale * zoom).coerceIn(0.18f, 8f)
-                                val appliedZoom = newScale / currentTransform.scale
-                                currentTransform = ViewTransform(
-                                    scale = newScale,
-                                    offsetX = centroid.x +
-                                        (currentTransform.offsetX - centroid.x) * appliedZoom + pan.x,
-                                    offsetY = centroid.y +
-                                        (currentTransform.offsetY - centroid.y) * appliedZoom + pan.y,
+                                currentTransform = PerspectiveGeometry.applyGesture(
+                                    currentTransform,
+                                    Point2(centroid.x, centroid.y),
+                                    Point2(pan.x, pan.y),
+                                    zoom,
                                 )
                                 transform = currentTransform
                             }
@@ -374,7 +381,9 @@ private fun ImageWorkspace(
                         }
                         val indicatorIndex = points.indexOfFirst { point ->
                             PerspectiveGeometry.edgeIndicator(point, size.width.toFloat(), size.height.toFloat())
-                                ?.let { PerspectiveGeometry.distance(it, Point2(tap.x, tap.y)) < 32f } == true
+                                ?.let {
+                                    PerspectiveGeometry.distance(it, Point2(tap.x, tap.y)) < 48.dp.toPx()
+                                } == true
                         }
                         if (indicatorIndex >= 0) {
                             val point = points[indicatorIndex]
@@ -434,7 +443,7 @@ private fun ImageWorkspace(
                         )
                     }
                     val edge = PerspectiveGeometry.edgeIndicator(target, size.width, size.height)
-                    val marker = edge ?: target
+                    val marker = PerspectiveGeometry.hitTestPosition(target, size.width, size.height)
                     drawCircle(
                         color = Color(perspective.color).copy(alpha = perspective.opacity),
                         radius = if (edge == null) 10f else 13f,

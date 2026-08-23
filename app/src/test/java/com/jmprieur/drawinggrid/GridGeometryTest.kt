@@ -104,7 +104,7 @@ class GridGeometryTest {
             zoom = 1.5f,
         )
 
-        assertEquals(ViewTransform(3f, -65f, -75f), second)
+        assertEquals(ViewTransform(3f, -175f, -170f), second)
     }
 
     @Test

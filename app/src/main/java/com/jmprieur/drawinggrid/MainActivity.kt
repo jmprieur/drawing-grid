@@ -292,8 +292,8 @@ private fun ImageWorkspace(
     modifier: Modifier,
 ) {
     var containerSize by remember { mutableStateOf(IntSize.Zero) }
-    var transform by remember(image) { mutableStateOf(ViewTransform()) }
-    val latestTransform by rememberUpdatedState(transform)
+    val transformState = remember(image) { mutableStateOf(ViewTransform()) }
+    var transform by transformState
     val currentPerspective by rememberUpdatedState(perspective)
     val imageBounds = GridGeometry.fittedBounds(
         containerSize.width.toFloat(), containerSize.height.toFloat(), image.width.toFloat(), image.height.toFloat(),
@@ -316,7 +316,7 @@ private fun ImageWorkspace(
                 awaitEachGesture {
                     val gesturePerspective = currentPerspective
                     val down = awaitFirstDown()
-                    val originalTransform = latestTransform
+                    val originalTransform = transformState.value
                     var currentTransform = originalTransform
                     var moved = false
                     var totalPan = Offset.Zero

@@ -253,8 +253,9 @@ private fun PhotoArea(
 ) {
     Box(modifier.background(MaterialTheme.colorScheme.surfaceVariant).clipToBounds()) {
         bitmap?.let { image ->
+            val imageBitmap = remember(image) { image.asImageBitmap() }
             ImageWorkspace(
-                image.asImageBitmap(),
+                imageBitmap,
                 settings,
                 perspective,
                 mode,
@@ -294,27 +295,21 @@ private fun ImageWorkspace(
     var containerSize by remember { mutableStateOf(IntSize.Zero) }
     val transformState = remember(image) { mutableStateOf(ViewTransform()) }
     var transform by transformState
-    var handledFitRequest by remember(image) { mutableIntStateOf(fitRequest) }
-    var handledFitPerspectiveRequest by remember(image) { mutableIntStateOf(fitPerspectiveRequest) }
     val currentPerspective by rememberUpdatedState(perspective)
     val imageBounds = GridGeometry.fittedBounds(
         containerSize.width.toFloat(), containerSize.height.toFloat(), image.width.toFloat(), image.height.toFloat(),
     )
     LaunchedEffect(fitRequest) {
-        if (fitRequest != handledFitRequest) {
-            transform = ViewTransform()
-            handledFitRequest = fitRequest
-        }
+        if (fitRequest > 0) transform = ViewTransform()
     }
     LaunchedEffect(fitPerspectiveRequest) {
-        if (fitPerspectiveRequest != handledFitPerspectiveRequest && imageBounds != null) {
+        if (fitPerspectiveRequest > 0 && imageBounds != null) {
             transform = PerspectiveGeometry.fitPerspective(
                 containerSize.width.toFloat(),
                 containerSize.height.toFloat(),
                 imageBounds,
                 currentPerspective.points.filter { point -> point.enabled }.map { point -> point.position },
             )
-            handledFitPerspectiveRequest = fitPerspectiveRequest
         }
     }
     val gestureModifier = modifier
